@@ -5,7 +5,7 @@ itself.  No LLM API calls, no network, no external services.
 
 Chain property tests verify:
 - Appending N records produces a valid chain (every hash links to its predecessor).
-- Mutating one byte in any record causes verify_chain to detect the break.
+- Mutating one byte in any record causes verify_local_ledger to detect the break.
 - A chain survives a process restart (state loaded from the tail of the file).
 """
 
@@ -106,7 +106,7 @@ _spec.loader.exec_module(_asqav_module)  # type: ignore[union-attr]
 
 AsqavLogger = _asqav_module.AsqavLogger
 _GENESIS_HASH = _asqav_module._GENESIS_HASH
-_canonical_bytes = _asqav_module._canonical_bytes
+_local_ledger_canonical_bytes = _asqav_module._local_ledger_canonical_bytes
 _content_digest = _asqav_module._content_digest
 _sha256_hex = _asqav_module._sha256_hex
 
@@ -179,10 +179,10 @@ def test_sha256_hex_is_64_chars() -> None:
     assert h == "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
 
 
-def test_canonical_bytes_is_deterministic() -> None:
+def test_local_ledger_canonical_bytes_is_deterministic() -> None:
     d = {"b": 2, "a": 1, "c": [3, 4]}
-    b1 = _canonical_bytes(d)
-    b2 = _canonical_bytes({"c": [3, 4], "a": 1, "b": 2})
+    b1 = _local_ledger_canonical_bytes(d)
+    b2 = _local_ledger_canonical_bytes({"c": [3, 4], "a": 1, "b": 2})
     assert b1 == b2
 
 
@@ -243,17 +243,17 @@ def test_chain_links_correctly_for_n_records(tmp_path) -> None:
         ), f"Chain broken between records {i-1} and {i}"
 
 
-def test_verify_chain_passes_on_valid_log(tmp_path) -> None:
+def test_verify_local_ledger_passes_on_valid_log(tmp_path) -> None:
     path = str(tmp_path / "audit.jsonl")
     logger = _logger_at(path)
     _append_n(logger, 5)
 
-    ok, msg = logger.verify_chain(path)
+    ok, msg = logger.verify_local_ledger(path)
     assert ok is True, f"Expected valid chain but got: {msg}"
     assert msg == "ok"
 
 
-def test_verify_chain_detects_record_hash_tampering(tmp_path) -> None:
+def test_verify_local_ledger_detects_record_hash_tampering(tmp_path) -> None:
     path = str(tmp_path / "audit.jsonl")
     logger = _logger_at(path)
     _append_n(logger, 5)
@@ -266,12 +266,12 @@ def test_verify_chain_detects_record_hash_tampering(tmp_path) -> None:
         for r in records:
             fh.write(json.dumps(r, separators=(",", ":")) + "\n")
 
-    ok, msg = logger.verify_chain(path)
+    ok, msg = logger.verify_local_ledger(path)
     assert ok is False
     assert "hash mismatch" in msg
 
 
-def test_verify_chain_detects_prev_hash_tampering(tmp_path) -> None:
+def test_verify_local_ledger_detects_prev_hash_tampering(tmp_path) -> None:
     path = str(tmp_path / "audit.jsonl")
     logger = _logger_at(path)
     _append_n(logger, 5)
@@ -280,18 +280,18 @@ def test_verify_chain_detects_prev_hash_tampering(tmp_path) -> None:
     # Recompute record_hash after tampering prev_hash to bypass the first check.
     records[3]["prev_hash"] = "a" * 64
     hashable = {k: v for k, v in records[3].items() if k != "record_hash"}
-    records[3]["record_hash"] = _sha256_hex(_canonical_bytes(hashable))
+    records[3]["record_hash"] = _sha256_hex(_local_ledger_canonical_bytes(hashable))
 
     with open(path, "w", encoding="utf-8") as fh:
         for r in records:
             fh.write(json.dumps(r, separators=(",", ":")) + "\n")
 
-    ok, msg = logger.verify_chain(path)
+    ok, msg = logger.verify_local_ledger(path)
     assert ok is False
     assert "chain break" in msg
 
 
-def test_verify_chain_detects_deleted_record(tmp_path) -> None:
+def test_verify_local_ledger_detects_deleted_record(tmp_path) -> None:
     path = str(tmp_path / "audit.jsonl")
     logger = _logger_at(path)
     _append_n(logger, 5)
@@ -304,7 +304,7 @@ def test_verify_chain_detects_deleted_record(tmp_path) -> None:
         for r in records:
             fh.write(json.dumps(r, separators=(",", ":")) + "\n")
 
-    ok, msg = logger.verify_chain(path)
+    ok, msg = logger.verify_local_ledger(path)
     assert ok is False
 
 
@@ -324,7 +324,7 @@ def test_chain_resumes_after_process_restart(tmp_path) -> None:
     _append_n(logger2, 3)
 
     # Full 6-record chain should verify clean.
-    ok, msg = logger2.verify_chain(path)
+    ok, msg = logger2.verify_local_ledger(path)
     assert ok is True, f"Chain broken across restart: {msg}"
 
 
@@ -361,7 +361,7 @@ def test_seq_counter_restored_after_restart(tmp_path) -> None:
     ), f"seq reset after restart: expected 5, got {records[5]['seq']}"
 
     # The full chain must also pass integrity verification.
-    ok, msg = logger2.verify_chain(path)
+    ok, msg = logger2.verify_local_ledger(path)
     assert ok is True, f"Chain broken after restart: {msg}"
 
 
@@ -475,7 +475,7 @@ def test_concurrent_callbacks_keep_chain_ordered(tmp_path) -> None:
 
     Regression test for the out-of-order-write race: seq/prev_hash assignment
     and the file write must happen under the same lock, otherwise two threads
-    can write their records in reversed order and break verify_chain.
+    can write their records in reversed order and break verify_local_ledger.
     """
     path = str(tmp_path / "audit.jsonl")
     logger = _logger_at(path)
@@ -505,7 +505,7 @@ def test_concurrent_callbacks_keep_chain_ordered(tmp_path) -> None:
     records = _read_records(path)
     assert len(records) == n_threads * per_thread
     assert [r["seq"] for r in records] == list(range(n_threads * per_thread))
-    ok, msg = logger.verify_chain(path)
+    ok, msg = logger.verify_local_ledger(path)
     assert ok is True, f"Chain broken under concurrent writes: {msg}"
 
 
@@ -536,7 +536,7 @@ def test_restart_resumes_chain_when_last_record_exceeds_4kb(tmp_path) -> None:
     ), "Restart did not resume the chain from a record larger than 4 KB"
     _append_n(logger2, 2)
 
-    ok, msg = logger2.verify_chain(path)
+    ok, msg = logger2.verify_local_ledger(path)
     assert ok is True, f"Chain broken across restart with large record: {msg}"
 
 
@@ -572,7 +572,7 @@ def test_async_hooks_write_records(tmp_path) -> None:
 
     records = _read_records(path)
     assert [r["status"] for r in records] == ["success", "failure"]
-    ok, msg = logger.verify_chain(path)
+    ok, msg = logger.verify_local_ledger(path)
     assert ok is True, msg
 
 

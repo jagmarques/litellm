@@ -10,6 +10,14 @@ Design goals (matching the on-device ask from litellm#25329):
 - Never breaks an LLM call: every code path is wrapped fail-soft.
 - Does not log message content by default; logs content digests so
   auditors can prove a payload was present without reconstructing it.
+
+Not the IETF receipt chain: the JSONL chain here is a local-only session
+ledger.  It canonicalizes with ``json.dumps(sort_keys=True)`` and hashes the
+whole record including ``prev_hash``, where the IETF compliance-receipt chain
+(draft-marques-asqav-compliance-receipts) canonicalizes with JCS and hashes
+only the signed payload member.  Records in this ledger must not be presented
+as IETF compliance receipts, and this module's verification must not be used
+to verify IETF receipt chains.
 """
 
 from __future__ import annotations
@@ -40,12 +48,9 @@ def _sha256_hex(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def _canonical_bytes(record: dict[str, Any]) -> bytes:
-    """Stable canonical serialisation for hashing.
-
-    We sort keys and use separators=(',', ':') so the byte sequence is
-    deterministic across Python versions and platforms.
-    """
+def _local_ledger_canonical_bytes(record: dict[str, Any]) -> bytes:
+    """Canonical bytes of the LOCAL ledger only: json.dumps sort_keys dialect over
+    the whole record (not JCS, not the IETF payload-member scope)."""
     return json.dumps(record, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
 
@@ -318,7 +323,7 @@ class AsqavLogger(CustomLogger):
                     "prev_hash": self._prev_hash,
                     **loggable,
                 }
-                record_hash = _sha256_hex(_canonical_bytes(hashable))
+                record_hash = _sha256_hex(_local_ledger_canonical_bytes(hashable))
 
                 if not self._write_record({**hashable, "record_hash": record_hash}):
                     return
@@ -404,18 +409,19 @@ class AsqavLogger(CustomLogger):
         )
 
     # ------------------------------------------------------------------
-    # Chain verification (utility; not called on the hot path)
+    # Local-ledger chain verification (utility; not called on the hot path)
     # ------------------------------------------------------------------
 
-    def verify_chain(self, log_path: Optional[str] = None) -> tuple[bool, str]:
-        """Verify the integrity of the audit log at log_path.
+    def verify_local_ledger(self, log_path: Optional[str] = None) -> tuple[bool, str]:
+        """Verify the integrity of the LOCAL JSONL session ledger at log_path.
 
         Returns (True, "ok") when every record's hash matches its content and
         its prev_hash matches the previous record's hash.  Returns
         (False, reason) on the first violation found.
 
-        This method is intentionally a pure stdlib utility so auditors can
-        paste it anywhere.
+        This verifies the local ledger only; it is not IETF receipt-chain
+        verification (different canonicalization and hash scope).  It is
+        intentionally a pure stdlib utility so auditors can paste it anywhere.
         """
         path = log_path or self._log_path
         try:
@@ -430,7 +436,7 @@ class AsqavLogger(CustomLogger):
                     stored_hash = record.get("record_hash", "")
                     # Recompute hash over all fields except record_hash itself.
                     hashable = {k: v for k, v in record.items() if k != "record_hash"}
-                    computed_hash = _sha256_hex(_canonical_bytes(hashable))
+                    computed_hash = _sha256_hex(_local_ledger_canonical_bytes(hashable))
 
                     if computed_hash != stored_hash:
                         return (
