@@ -1,13 +1,7 @@
 #!/usr/bin/env bash
-#
-# Test guardrail register and submissions endpoints.
-# Requires: proxy running with DB (migrations applied), valid admin API key.
-#
-# Usage:
-#   export LITELLM_API_KEY="sk-..."   # required, use an admin key
-#   ./scripts/test_guardrails_register_endpoints.sh
-#   BASE_URL=http://localhost:4000 LITELLM_API_KEY="sk-..." ./scripts/test_guardrails_register_endpoints.sh
-#
+# Test guardrail register and submissions endpoints; needs a proxy running with DB
+# (migrations applied) and an admin API key; BASE_URL defaults to http://localhost:4000
+# Usage: export LITELLM_API_KEY="sk-..."; ./scripts/test_guardrails_register_endpoints.sh
 set -euo pipefail
 
 BASE_URL="${BASE_URL:-http://localhost:4000}"

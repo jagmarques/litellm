@@ -1,18 +1,7 @@
 #!/usr/bin/env bash
-# LiteLLM CLI Installer (the thin `lite` client)
-# Usage: curl -fsSL https://raw.githubusercontent.com/BerriAI/litellm/main/scripts/install-cli.sh | sh
-#
-# Installs only litellm[cli]: the `lite` command for authenticating to a LiteLLM
-# proxy and running coding agents (lite claude / codex / opencode) through it.
-# None of the proxy server runtime is pulled in. To run a proxy server instead,
-# use scripts/install.sh, which installs litellm[proxy].
-#
-# Needs only curl: uv is bootstrapped if missing, and uv provisions a compatible
-# Python itself (honouring litellm's requires-python), downloading a managed one
-# when the host has no suitable interpreter.
-#
-# NOTE: set -e without pipefail for POSIX sh compatibility (dash on Ubuntu/Debian
-# ignores the shebang when invoked as `sh` and does not support `pipefail`).
+# LiteLLM CLI Installer - installs only litellm[cli], the thin `lite` client (no proxy runtime)
+# curl -fsSL https://raw.githubusercontent.com/BerriAI/litellm/main/scripts/install-cli.sh | sh
+# Needs only curl; uv is bootstrapped if missing; set -e without pipefail for POSIX sh
 set -eu
 
 # NOTE: before merging, this must stay as "litellm[cli]" to install from PyPI.
@@ -86,9 +75,7 @@ if [ -z "$UV_BIN" ] || [ "${CURRENT_UV_VERSION:-}" != "$UV_VERSION" ]; then
 fi
 
 # ── install ────────────────────────────────────────────────────────────────
-# --python-preference system: reuse a compatible system Python when present,
-# otherwise download a managed one. Either way uv honours litellm's requires-python,
-# so a too-old (3.9) or too-new (3.14+) system Python is skipped, not forced.
+# --python-preference system: reuse a compatible system Python when present, else a managed one
 echo ""
 header "Installing litellm[cli]…"
 echo ""

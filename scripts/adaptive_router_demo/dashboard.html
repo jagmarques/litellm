@@ -368,8 +368,8 @@ function renderRouters(routers) {
 }
 
 function pickShare(rows) {
-  // Approximate prob each model wins a Thompson-sample draw against the others.
-  // Simple proxy: softmax over quality_mean with temperature=0.05.
+  // Approximate prob each model wins a Thompson-sample draw against the others
+  // Simple proxy: softmax over quality_mean with temperature=0.05
   if (rows.length === 0) return {};
   const T = 0.05;
   const expv = rows.map(r => Math.exp(r.quality_mean / T));
@@ -405,7 +405,7 @@ function renderCells(router) {
       const observed = Math.max(0, r.samples - 10); // strip cold-start prior mass
       const isLead = r.model === lead.model;
       const sigLabel = observed === 0 ? "no signals yet" : `${observed.toFixed(0)} signals`;
-      // Tooltip exposes raw Beta(α,β) for power users.
+      // Tooltip exposes raw Beta(α,β) for power users
       const tip = `Beta(α=${r.alpha.toFixed(1)}, β=${r.beta.toFixed(1)}) — ` +
                   `started at α=5,β=5 (cold-start prior), so the bar reflects ` +
                   `${observed.toFixed(0)} real feedback signals so far.`;
@@ -422,9 +422,8 @@ function renderCells(router) {
 }
 
 function computeQualityKept(router) {
-  // For each request type: pick_count_per_cell × quality_mean_per_cell
-  // summed and divided by total picks gives "average quality delivered".
-  // Compare against best-cell quality per type (weighted by picks in that type).
+  // "Average quality delivered" = picks-weighted cell quality per request type,
+  // compared against the best cell's quality in that type
   const byType = new Map();
   for (const c of router.cells) {
     if (!byType.has(c.request_type)) byType.set(c.request_type, []);

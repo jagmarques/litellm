@@ -1,11 +1,7 @@
 #!/usr/bin/env bash
-#
-# Creates a team, generates a team key, and submits a test guardrail with it.
-# Requires: curl, jq
-#
-# Usage:
-#   ADMIN_KEY=sk-your-admin-key ./scripts/create_team_key_and_submit_guardrail.sh
-#   BASE_URL=http://localhost:4000 ADMIN_KEY=sk-your-admin-key ./scripts/create_team_key_and_submit_guardrail.sh
+# Create a team, generate a team key, and submit a test guardrail with it (needs curl, jq)
+# Usage: ADMIN_KEY=sk-your-admin-key ./scripts/create_team_key_and_submit_guardrail.sh
+# BASE_URL env overrides the proxy URL (default http://localhost:4000)
 
 set -e
 

@@ -1,12 +1,7 @@
 #!/usr/bin/env bash
-# LiteLLM Installer
+# LiteLLM Installer - needs only curl; uv is bootstrapped if missing and provisions Python
 # Usage: curl -fsSL https://raw.githubusercontent.com/BerriAI/litellm/main/scripts/install.sh | sh
-#
-# Needs only curl: uv is bootstrapped if missing, and uv provisions a compatible
-# Python itself (reusing a suitable system one, else downloading a managed build).
-#
-# NOTE: set -e without pipefail for POSIX sh compatibility (dash on Ubuntu/Debian
-# ignores the shebang when invoked as `sh` and does not support `pipefail`).
+# Note: set -e without pipefail for POSIX sh (dash ignores the shebang, no pipefail support)
 set -eu
 
 # NOTE: before merging, this must stay as "litellm[proxy]" to install from PyPI.
@@ -84,9 +79,8 @@ echo ""
 header "Installing litellm[proxy]…"
 echo ""
 
-# --python-preference system: reuse a compatible system Python when present,
-# otherwise download a managed one. Either way uv honours litellm's requires-python,
-# so a too-old (3.9) or too-new (3.14+) system Python is skipped, not forced.
+# --python-preference system: reuse a compatible system Python when present, else a
+# managed one (uv honours litellm's requires-python, skipping too-old/too-new interpreters)
 "$UV_BIN" tool install --python-preference system --force "${LITELLM_PACKAGE}" \
   || die "uv tool install failed. Try manually: $UV_BIN tool install '${LITELLM_PACKAGE}'"
 

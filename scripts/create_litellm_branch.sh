@@ -1,19 +1,8 @@
 #!/bin/bash
 
-# Script to create a branch with litellm_ prefix from a contributor's branch
+# Create a litellm_-prefixed branch from a contributor branch; "remote:branch" sources
+# auto-add the GitHub fork remote and fetch it; with no args, uses the current branch
 # Usage: ./create_litellm_branch.sh [source_branch] [new_branch_name]
-# 
-# Examples:
-#   ./create_litellm_branch.sh branch-name
-#   ./create_litellm_branch.sh remote:branch-name
-#   ./create_litellm_branch.sh codgician:ghcopilot-costmap
-#
-# If source_branch is in format "remote:branch", the script will:
-#   - Automatically add the remote if it doesn't exist (assumes GitHub fork)
-#   - Fetch the branch from that remote
-#   - Create a new branch with litellm_ prefix
-#
-# If no arguments provided, uses current branch as source
 
 set -e
 
