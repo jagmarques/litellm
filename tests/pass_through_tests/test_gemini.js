@@ -5,19 +5,8 @@
 
 // const prompt = "Explain how AI works in 2 pages";
 
-// async function run() {
-//     try {
-//         const result = await model.generateContentStream(prompt, { baseUrl: "http://localhost:4000/gemini" });
-//         const response = await result.response;
-//         console.log(response.text());
-//         for await (const chunk of result.stream) {
-//             const chunkText = chunk.text();
-//             console.log(chunkText);
-//             process.stdout.write(chunkText);
-//         }
-//     } catch (error) {
-//         console.error("Error:", error);
-//     }
-// }
+// Sample (kept commented out): async run() streams "Explain how AI works in 2 pages" via
+// gemini-1.5-flash through the /gemini passthrough, printing the response and each chunk,
+// logging errors; run() invokes it
 
 // run();

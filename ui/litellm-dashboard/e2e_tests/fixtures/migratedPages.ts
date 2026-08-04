@@ -9,17 +9,42 @@
  *   - navigation specs that assert per-page URLs (tests/navigation/sidebar.spec.ts)
  *
  * Keep this in lockstep with MIGRATED_PAGES in src/utils/migratedPages.ts.
- * Pending (add as each PR lands): the leaf-pages batch
- * (budgets, caching, cost-tracking, guardrails, guardrails-monitor, logs,
- * mcp-servers, memory, policies, prompts, search-tools, skills,
- * tag-management, tool-policies, transform-request, ui-theme, vector-stores,
- * workflows).
  */
 export const MIGRATED_E2E_PAGES: Record<string, string> = {
+  "api-keys": "api-keys",
+  models: "models-and-endpoints",
   api_ref: "api-reference",
   "llm-playground": "playground",
   projects: "projects",
   "access-groups": "access-groups",
+  budgets: "budgets",
+  workflows: "workflows",
+  "guardrails-monitor": "guardrails-monitor",
+  "mcp-servers": "mcp-servers",
+  "search-tools": "search-tools",
+  "tag-management": "tag-management",
+  "vector-stores": "vector-stores",
+  memory: "memory",
+  policies: "policies",
+  guardrails: "guardrails",
+  prompts: "prompts",
+  "tool-policies": "tool-policies",
+  skills: "skills",
+  caching: "caching",
+  "cost-tracking": "cost-tracking",
+  "transform-request": "transform-request",
+  "ui-theme": "ui-theme",
+  logs: "logs",
+  "admin-panel": "admin-panel",
+  "logging-and-alerts": "logging-and-alerts",
+  "model-hub-table": "model-hub-table",
+  new_usage: "usage",
+  usage: "old-usage",
+  agents: "agents",
+  "router-settings": "router-settings",
+  users: "users",
+  teams: "teams",
+  organizations: "organizations",
 };
 
 export const MIGRATED_E2E_SEGMENTS: string[] = [...new Set(Object.values(MIGRATED_E2E_PAGES))];

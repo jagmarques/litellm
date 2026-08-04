@@ -1,17 +1,7 @@
 #!/bin/bash
-# Parallel LiteLLM Health Check Runner (Bash version)
-#
-# This script runs multiple health check containers in parallel.
-#
-# Usage:
-#   export LITELLM_BASE_URL="https://litellm.example.com"
-#   export LITELLM_API_KEY="your-api-key"
-#   ./run_parallel_health_checks.sh [num_parallel_jobs] [image_name] [container_runtime]
-#
-# Defaults:
-#   - num_parallel_jobs: 16
-#   - image_name: litellm/litellm-health-check:latest
-#   - container_runtime: docker
+# Run parallel LiteLLM health check containers against LITELLM_BASE_URL using LITELLM_API_KEY
+# Usage: ./run_parallel_health_checks.sh [jobs=16] [image=litellm/litellm-health-check:latest]
+# Third arg selects the container runtime (default docker)
 
 set -e
 
@@ -68,9 +58,8 @@ run_health_check() {
     "$CONTAINER_RUNTIME" run --rm "${env_vars[@]}" "$IMAGE_NAME"
 }
 
-# Run parallel health checks
-# This creates an infinite loop that keeps spawning containers
-# Each container tests all models, then exits, and a new one starts
+# Run parallel health checks in an infinite loop: each container tests all models
+# then exits, and a new one starts in its place
 while true; do
     # Start containers in parallel using background jobs
     pids=()

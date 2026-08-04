@@ -5935,26 +5935,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/in_product_nudges": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get In Product Nudges
-         * @description Get in-product nudges configuration.
-         */
-        get: operations["get_in_product_nudges_in_product_nudges_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/interactions": {
         parameters: {
             query?: never;
@@ -7250,6 +7230,29 @@ export interface paths {
         patch: operations["mistral_proxy_route_mistral__endpoint__patch"];
         trace?: never;
     };
+    "/model/block": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Block Model
+         * @description Block a DB-stored model deployment from serving requests.
+         *
+         *     Parameters:
+         *     - model_id: str - The model deployment id to block.
+         */
+        post: operations["block_model_model_block_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/model/cost_map/source": {
         parameters: {
             query?: never;
@@ -7315,6 +7318,11 @@ export interface paths {
          *
          *         - When litellm_model_id is passed, it will return the info for that specific model
          *         - When litellm_model_id is not passed, it will return the info for all models
+         *         - include_team_models: When true, filter to deployments the caller can use (same as /v2/model/info).
+         *         - teamId: Filter to models accessible by the given team.
+         *
+         *     Each model in the list response includes `model_info.access_via_team_ids` and
+         *     `model_info.direct_access` when the proxy database is connected.
          *
          *     Returns:
          *         Returns a dictionary containing information about each model.
@@ -7462,6 +7470,29 @@ export interface paths {
         get: operations["model_streaming_metrics_model_streaming_metrics_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/model/unblock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unblock Model
+         * @description Unblock a DB-stored model deployment so it can serve requests again.
+         *
+         *     Parameters:
+         *     - model_id: str - The model deployment id to unblock.
+         */
+        post: operations["unblock_model_model_unblock_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7741,6 +7772,15 @@ export interface paths {
          *     - scope: Optional scope parameter. Currently only accepts "expand".
          *              When scope=expand is passed, proxy admins, team admins, and org admins
          *              will receive all proxy models as if they are a proxy admin.
+         *     - healthy_only: When true, hide models whose backing deployments are all marked
+         *                     unhealthy by background health checks. Requires
+         *                     `background_health_checks: true` in general_settings; without
+         *                     health state the listing is returned unfiltered (fail open).
+         *                     Models expanded from wildcard routes (e.g. `openai/*`) are not
+         *                     filtered, and nothing is hidden when `allowed_fails_policy` is
+         *                     configured (cooldown remains the sole exclusion mechanism).
+         *                     Hiding is presentation-only: a hidden model can still be
+         *                     called directly.
          */
         get: operations["model_list_models_get"];
         put?: never;
@@ -7767,6 +7807,10 @@ export interface paths {
          *
          *     Follows OpenAI API specification for individual model retrieval.
          *     https://platform.openai.com/docs/api-reference/models/retrieve
+         *
+         *     Query parameters mirror `/v1/models` so the same caller context (team
+         *     scoping, health filtering, paused deployments) drives both endpoints; the
+         *     listing's public id must resolve to the same internal deployment here.
          */
         get: operations["model_info_models__model_id__get"];
         put?: never;
@@ -16510,6 +16554,11 @@ export interface paths {
          *
          *         - When litellm_model_id is passed, it will return the info for that specific model
          *         - When litellm_model_id is not passed, it will return the info for all models
+         *         - include_team_models: When true, filter to deployments the caller can use (same as /v2/model/info).
+         *         - teamId: Filter to models accessible by the given team.
+         *
+         *     Each model in the list response includes `model_info.access_via_team_ids` and
+         *     `model_info.direct_access` when the proxy database is connected.
          *
          *     Returns:
          *         Returns a dictionary containing information about each model.
@@ -16563,6 +16612,15 @@ export interface paths {
          *     - scope: Optional scope parameter. Currently only accepts "expand".
          *              When scope=expand is passed, proxy admins, team admins, and org admins
          *              will receive all proxy models as if they are a proxy admin.
+         *     - healthy_only: When true, hide models whose backing deployments are all marked
+         *                     unhealthy by background health checks. Requires
+         *                     `background_health_checks: true` in general_settings; without
+         *                     health state the listing is returned unfiltered (fail open).
+         *                     Models expanded from wildcard routes (e.g. `openai/*`) are not
+         *                     filtered, and nothing is hidden when `allowed_fails_policy` is
+         *                     configured (cooldown remains the sole exclusion mechanism).
+         *                     Hiding is presentation-only: a hidden model can still be
+         *                     called directly.
          */
         get: operations["model_list_v1_models_get"];
         put?: never;
@@ -16589,6 +16647,10 @@ export interface paths {
          *
          *     Follows OpenAI API specification for individual model retrieval.
          *     https://platform.openai.com/docs/api-reference/models/retrieve
+         *
+         *     Query parameters mirror `/v1/models` so the same caller context (team
+         *     scoping, health filtering, paused deployments) drives both endpoints; the
+         *     listing's public id must resolve to the same internal deployment here.
          */
         get: operations["model_info_v1_models__model_id__get"];
         put?: never;
@@ -20703,6 +20765,11 @@ export interface components {
             /** Key */
             key: string;
         };
+        /** BlockModelRequest */
+        BlockModelRequest: {
+            /** Model Id */
+            model_id: string;
+        };
         /** BlockTeamRequest */
         BlockTeamRequest: {
             /** Team Id */
@@ -21974,6 +22041,11 @@ export interface components {
              */
             alerting_threshold?: number | null;
             /**
+             * Allow Cli Sso Verification Uri Complete
+             * @description opt-in to RFC 8628 verification_uri_complete for the CLI SSO device flow, pre-filling the user_code in the browser. Off by default; intended for same-host clients where the device that starts the flow and the browser run on the same machine
+             */
+            allow_cli_sso_verification_uri_complete?: boolean | null;
+            /**
              * Allowed Routes
              * @description Proxy API Endpoints you want users to be able to access
              */
@@ -21983,6 +22055,11 @@ export interface components {
              * @description run health checks in background
              */
             background_health_checks?: boolean | null;
+            /**
+             * Cancel On Disconnect
+             * @description cancel the in-flight upstream LLM request (non-streaming) when the client disconnects, freeing backend capacity (e.g. a vLLM GPU slot); the request is logged as a 499 failure
+             */
+            cancel_on_disconnect?: boolean | null;
             /**
              * Completion Model
              * @description proxy level default model for all chat completion calls
@@ -22134,6 +22211,11 @@ export interface components {
              * @description Set-up pass-through endpoints for provider-specific endpoints. Docs - https://docs.litellm.ai/docs/proxy/pass_through
              */
             pass_through_endpoints?: components["schemas"]["PassThroughGenericEndpoint"][] | null;
+            /**
+             * Pass Through Request Timeout
+             * @description Default upstream request timeout in seconds for native and custom pass-through endpoints that use pass_through_request. Defaults to 600 when unset.
+             */
+            pass_through_request_timeout?: number | null;
             /**
              * Reject Clientside Metadata Tags
              * @description When set to True, rejects requests that contain client-side 'metadata.tags' to prevent users from influencing budgets by sending different tags. Tags can only be inherited from the API key metadata.
@@ -23728,15 +23810,6 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
-        /** InProductNudgeResponse */
-        InProductNudgeResponse: {
-            /**
-             * Is Claude Code Enabled
-             * @description Whether the Claude Code nudge should be shown.
-             * @default false
-             */
-            is_claude_code_enabled: boolean;
-        };
         /** IndexCreateLiteLLMParams */
         IndexCreateLiteLLMParams: {
             /** Vector Store Index */
@@ -24904,6 +24977,8 @@ export interface components {
             aws_region_name?: string | null;
             /** Aws Secret Access Key */
             aws_secret_access_key?: string | null;
+            /** Azure Ad Token */
+            azure_ad_token?: string | null;
             /** Budget Duration */
             budget_duration?: string | null;
             /** Cache Creation Input Audio Token Cost */
@@ -24920,6 +24995,10 @@ export interface components {
             cache_read_input_token_cost?: number | null;
             /** Cache Read Input Token Cost Above 200K Tokens */
             cache_read_input_token_cost_above_200k_tokens?: number | null;
+            /** Cache Read Input Token Cost Above 200K Tokens Priority */
+            cache_read_input_token_cost_above_200k_tokens_priority?: number | null;
+            /** Cache Read Input Token Cost Above 272K Tokens Priority */
+            cache_read_input_token_cost_above_272k_tokens_priority?: number | null;
             /** Cache Read Input Token Cost Flex */
             cache_read_input_token_cost_flex?: number | null;
             /** Cache Read Input Token Cost Priority */
@@ -24968,6 +25047,10 @@ export interface components {
             input_cost_per_token_above_128k_tokens?: number | null;
             /** Input Cost Per Token Above 200K Tokens */
             input_cost_per_token_above_200k_tokens?: number | null;
+            /** Input Cost Per Token Above 200K Tokens Priority */
+            input_cost_per_token_above_200k_tokens_priority?: number | null;
+            /** Input Cost Per Token Above 272K Tokens Priority */
+            input_cost_per_token_above_272k_tokens_priority?: number | null;
             /** Input Cost Per Token Batches */
             input_cost_per_token_batches?: number | null;
             /** Input Cost Per Token Cache Hit */
@@ -25041,6 +25124,10 @@ export interface components {
             output_cost_per_token_above_128k_tokens?: number | null;
             /** Output Cost Per Token Above 200K Tokens */
             output_cost_per_token_above_200k_tokens?: number | null;
+            /** Output Cost Per Token Above 200K Tokens Priority */
+            output_cost_per_token_above_200k_tokens_priority?: number | null;
+            /** Output Cost Per Token Above 272K Tokens Priority */
+            output_cost_per_token_above_272k_tokens_priority?: number | null;
             /** Output Cost Per Token Batches */
             output_cost_per_token_batches?: number | null;
             /** Output Cost Per Token Flex */
@@ -25168,6 +25255,34 @@ export interface components {
             spend: number;
             /** Team Id */
             team_id?: string | null;
+            /** Updated At */
+            updated_at?: string | null;
+            /** Updated By */
+            updated_by?: string | null;
+        };
+        /** LiteLLM_ProxyModelTable */
+        LiteLLM_ProxyModelTable: {
+            /**
+             * Blocked
+             * @default false
+             */
+            blocked: boolean;
+            /** Created At */
+            created_at?: string | null;
+            /** Created By */
+            created_by?: string | null;
+            /** Litellm Params */
+            litellm_params: {
+                [key: string]: unknown;
+            };
+            /** Model Id */
+            model_id: string;
+            /** Model Info */
+            model_info?: {
+                [key: string]: unknown;
+            } | null;
+            /** Model Name */
+            model_name: string;
             /** Updated At */
             updated_at?: string | null;
             /** Updated By */
@@ -27896,6 +28011,11 @@ export interface components {
              * @description The URL to which requests for this path should be forwarded.
              */
             target: string;
+            /**
+             * Timeout
+             * @description Upstream request timeout in seconds for this pass-through endpoint. If unset, uses general_settings.pass_through_request_timeout (default 600).
+             */
+            timeout?: number | null;
         };
         /**
          * PassThroughGuardrailSettings
@@ -30980,6 +31100,11 @@ export interface components {
             /** Auto Redirect To Sso */
             auto_redirect_to_sso: boolean;
             /**
+             * Hide Default Credentials Hint
+             * @default false
+             */
+            hide_default_credentials_hint: boolean;
+            /**
              * Is Control Plane
              * @default false
              */
@@ -32510,6 +32635,8 @@ export interface components {
             aws_region_name?: string | null;
             /** Aws Secret Access Key */
             aws_secret_access_key?: string | null;
+            /** Azure Ad Token */
+            azure_ad_token?: string | null;
             /** Budget Duration */
             budget_duration?: string | null;
             /** Cache Creation Input Audio Token Cost */
@@ -32526,6 +32653,10 @@ export interface components {
             cache_read_input_token_cost?: number | null;
             /** Cache Read Input Token Cost Above 200K Tokens */
             cache_read_input_token_cost_above_200k_tokens?: number | null;
+            /** Cache Read Input Token Cost Above 200K Tokens Priority */
+            cache_read_input_token_cost_above_200k_tokens_priority?: number | null;
+            /** Cache Read Input Token Cost Above 272K Tokens Priority */
+            cache_read_input_token_cost_above_272k_tokens_priority?: number | null;
             /** Cache Read Input Token Cost Flex */
             cache_read_input_token_cost_flex?: number | null;
             /** Cache Read Input Token Cost Priority */
@@ -32574,6 +32705,10 @@ export interface components {
             input_cost_per_token_above_128k_tokens?: number | null;
             /** Input Cost Per Token Above 200K Tokens */
             input_cost_per_token_above_200k_tokens?: number | null;
+            /** Input Cost Per Token Above 200K Tokens Priority */
+            input_cost_per_token_above_200k_tokens_priority?: number | null;
+            /** Input Cost Per Token Above 272K Tokens Priority */
+            input_cost_per_token_above_272k_tokens_priority?: number | null;
             /** Input Cost Per Token Batches */
             input_cost_per_token_batches?: number | null;
             /** Input Cost Per Token Cache Hit */
@@ -32647,6 +32782,10 @@ export interface components {
             output_cost_per_token_above_128k_tokens?: number | null;
             /** Output Cost Per Token Above 200K Tokens */
             output_cost_per_token_above_200k_tokens?: number | null;
+            /** Output Cost Per Token Above 200K Tokens Priority */
+            output_cost_per_token_above_200k_tokens_priority?: number | null;
+            /** Output Cost Per Token Above 272K Tokens Priority */
+            output_cost_per_token_above_272k_tokens_priority?: number | null;
             /** Output Cost Per Token Batches */
             output_cost_per_token_batches?: number | null;
             /** Output Cost Per Token Flex */
@@ -40448,7 +40587,7 @@ export interface operations {
         parameters: {
             query: {
                 /** @description Specify the service being hit. */
-                service: ("slack_budget_alerts" | "langfuse" | "langfuse_otel" | "slack" | "openmeter" | "webhook" | "email" | "braintrust" | "datadog" | "datadog_llm_observability" | "generic_api" | "arize" | "galileo" | "sqs") | string;
+                service: ("slack_budget_alerts" | "langfuse" | "langfuse_otel" | "slack" | "openmeter" | "webhook" | "email" | "braintrust" | "datadog" | "datadog_llm_observability" | "generic_api" | "arize" | "galileo" | "newrelic" | "sqs") | string;
             };
             header?: never;
             path?: never;
@@ -40591,26 +40730,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_in_product_nudges_in_product_nudges_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["InProductNudgeResponse"];
                 };
             };
         };
@@ -41265,7 +41384,7 @@ export interface operations {
                 page?: number;
                 /** @description Page size */
                 size?: number;
-                /** @description Filter keys by user ID. Supports partial matching (substring, case-insensitive). */
+                /** @description Filter keys by user ID. Exact match by default; set substring_matching=true (admin only) for case-insensitive substring matching. */
                 user_id?: string | null;
                 /** @description Filter keys by team ID */
                 team_id?: string | null;
@@ -41273,7 +41392,7 @@ export interface operations {
                 organization_id?: string | null;
                 /** @description Filter keys by key hash */
                 key_hash?: string | null;
-                /** @description Filter keys by key alias. Supports partial matching (substring, case-insensitive). */
+                /** @description Filter keys by key alias. Exact match by default; set substring_matching=true (admin only) for case-insensitive substring matching. */
                 key_alias?: string | null;
                 /** @description Return full key object */
                 return_full_object?: boolean;
@@ -41293,6 +41412,8 @@ export interface operations {
                 project_id?: string | null;
                 /** @description Filter keys by access group ID */
                 access_group_id?: string | null;
+                /** @description If true (proxy admins only), match user_id/key_alias as case-insensitive substrings instead of exact values. Defaults to false: /key/list matched these exactly before substring search was added, and an exact user_id/key_alias filter must never return another user's keys. */
+                substring_matching?: boolean;
             };
             header?: never;
             path?: never;
@@ -42240,6 +42361,42 @@ export interface operations {
             };
         };
     };
+    block_model_model_block_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The litellm-changed-by header enables tracking of actions performed by authorized users on behalf of other users, providing an audit trail for accountability */
+                "litellm-changed-by"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BlockModelRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LiteLLM_ProxyModelTable"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_model_cost_map_source_model_cost_map_source_get: {
         parameters: {
             query?: never;
@@ -42297,6 +42454,10 @@ export interface operations {
         parameters: {
             query?: {
                 litellm_model_id?: string | null;
+                /** @description When true, filter to deployments the caller can use via direct access or team membership. */
+                include_team_models?: boolean | null;
+                /** @description Filter models by team ID. Returns models with direct_access=True or teamId in access_via_team_ids */
+                teamId?: string | null;
             };
             header?: never;
             path?: never;
@@ -42515,6 +42676,42 @@ export interface operations {
             };
         };
     };
+    unblock_model_model_unblock_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The litellm-changed-by header enables tracking of actions performed by authorized users on behalf of other users, providing an audit trail for accountability */
+                "litellm-changed-by"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BlockModelRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LiteLLM_ProxyModelTable"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     update_model_model_update_post: {
         parameters: {
             query?: never;
@@ -42690,6 +42887,7 @@ export interface operations {
                 include_metadata?: boolean | null;
                 fallback_type?: string | null;
                 scope?: string | null;
+                healthy_only?: boolean | null;
             };
             header?: never;
             path?: never;
@@ -42719,7 +42917,10 @@ export interface operations {
     };
     model_info_models__model_id__get: {
         parameters: {
-            query?: never;
+            query?: {
+                team_id?: string | null;
+                healthy_only?: boolean | null;
+            };
             header?: never;
             path: {
                 model_id: string;
@@ -47938,6 +48139,7 @@ export interface operations {
                 key?: string | null;
                 existing_key?: string | null;
                 return_to?: string | null;
+                user_code?: string | null;
             };
             header?: never;
             path?: never;
@@ -48600,6 +48802,8 @@ export interface operations {
             query?: {
                 /** @description Team ID in the request parameters */
                 team_id?: string;
+                /** @description Limit the number of keys returned */
+                key_limit?: number | null;
             };
             header?: never;
             path?: never;
@@ -53525,6 +53729,10 @@ export interface operations {
         parameters: {
             query?: {
                 litellm_model_id?: string | null;
+                /** @description When true, filter to deployments the caller can use via direct access or team membership. */
+                include_team_models?: boolean | null;
+                /** @description Filter models by team ID. Returns models with direct_access=True or teamId in access_via_team_ids */
+                teamId?: string | null;
             };
             header?: never;
             path?: never;
@@ -53562,6 +53770,7 @@ export interface operations {
                 include_metadata?: boolean | null;
                 fallback_type?: string | null;
                 scope?: string | null;
+                healthy_only?: boolean | null;
             };
             header?: never;
             path?: never;
@@ -53591,7 +53800,10 @@ export interface operations {
     };
     model_info_v1_models__model_id__get: {
         parameters: {
-            query?: never;
+            query?: {
+                team_id?: string | null;
+                healthy_only?: boolean | null;
+            };
             header?: never;
             path: {
                 model_id: string;

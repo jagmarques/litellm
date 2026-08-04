@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 #
-# Install the repo's git hooks by pointing core.hooksPath at .githooks.
-#
-# Idempotent: re-running just reaffirms the config and refreshes chmod bits.
-# Run from anywhere inside the repo.
+# Point core.hooksPath at .githooks (idempotent; run from anywhere in the repo)
 
 set -euo pipefail
 

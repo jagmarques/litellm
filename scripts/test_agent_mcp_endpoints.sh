@@ -1,13 +1,7 @@
 #!/usr/bin/env bash
-#
-# Test agent endpoint-level changes for MCP tool permissions (object_permission).
-# Requires: proxy running, valid admin API key, curl, jq.
-#
-# Usage:
-#   export LITELLM_PROXY_BASE_URL="http://localhost:4000"  # optional, default below
-#   export LITELLM_API_KEY="sk-..."                        # required
-#   ./scripts/test_agent_mcp_endpoints.sh
-#
+# Test agent endpoint-level changes for MCP tool permissions (object_permission);
+# needs a running proxy, admin API key, curl, jq; LITELLM_PROXY_BASE_URL is optional
+# Usage: export LITELLM_API_KEY="sk-..."; ./scripts/test_agent_mcp_endpoints.sh
 set -euo pipefail
 
 BASE_URL="${LITELLM_PROXY_BASE_URL:-http://localhost:4000}"

@@ -213,9 +213,10 @@ async def test_encrypted_content_affinity_model_group_config_is_additive():
     )
 
     assert unfiltered == healthy_deployments
-    assert "encrypted_content_affinity_enabled" not in disabled_request_kwargs[
-        "litellm_metadata"
-    ]
+    assert (
+        "encrypted_content_affinity_enabled"
+        not in disabled_request_kwargs["litellm_metadata"]
+    )
 
     global_check = EncryptedContentAffinityCheck(
         enable_global_affinity=True,
@@ -1265,10 +1266,16 @@ async def test_ageneric_api_call_deployment_model_overrides_alias():
         # calling the helper through async_function_with_fallbacks).
         kwargs["model"] = "not-gemini-2.5-flash"
 
-    with patch.object(router, "async_get_available_deployment") as mock_dep, \
-         patch.object(router, "_update_kwargs_with_deployment", side_effect=inject_alias_into_kwargs), \
-         patch.object(router, "async_routing_strategy_pre_call_checks"), \
-         patch.object(router, "_get_client", return_value=None):
+    with (
+        patch.object(router, "async_get_available_deployment") as mock_dep,
+        patch.object(
+            router,
+            "_update_kwargs_with_deployment",
+            side_effect=inject_alias_into_kwargs,
+        ),
+        patch.object(router, "async_routing_strategy_pre_call_checks"),
+        patch.object(router, "_get_client", return_value=None),
+    ):
         mock_dep.return_value = {
             "model_name": "not-gemini-2.5-flash",
             "litellm_params": {
@@ -1282,9 +1289,9 @@ async def test_ageneric_api_call_deployment_model_overrides_alias():
             original_generic_function=capture_model,
         )
 
-    assert captured["model"] == "vertex_ai/gemini-2.5-flash", (
-        f"Expected deployment model 'vertex_ai/gemini-2.5-flash', got '{captured['model']}'"
-    )
+    assert (
+        captured["model"] == "vertex_ai/gemini-2.5-flash"
+    ), f"Expected deployment model 'vertex_ai/gemini-2.5-flash', got '{captured['model']}'"
 
 
 def test_router_get_model_access_groups_team_only_models():
@@ -2920,6 +2927,33 @@ def test_add_deployment_model_to_endpoint_for_llm_passthrough_route():
     ), f"Expected '/model/us.meta.llama3-8b-instruct-v1:0/invoke', got '{result['endpoint']}'"
 
 
+def test_update_kwargs_with_deployment_uses_pass_through_request_timeout():
+    router = litellm.Router(
+        model_list=[
+            {
+                "model_name": "my-bedrock-model",
+                "litellm_params": {
+                    "model": "bedrock/us.anthropic.claude-opus-4-5-20251101-v1:0",
+                },
+            }
+        ],
+    )
+    deployment = router.model_list[0]
+    kwargs: dict = {}
+
+    with patch(
+        "litellm.proxy.proxy_server.general_settings",
+        {"pass_through_request_timeout": 6},
+    ):
+        router._update_kwargs_with_deployment(
+            deployment=deployment,
+            kwargs=kwargs,
+            function_name="_ageneric_api_call_with_fallbacks",
+        )
+
+    assert kwargs["timeout"] == 6.0
+
+
 @pytest.mark.asyncio
 async def test_router_acompletion_with_unknown_model_and_default_fallback():
     """
@@ -3714,6 +3748,151 @@ def test_combine_fallback_usage():
 
 
 @pytest.mark.asyncio
+async def test_acompletion_streaming_iterator_does_not_log_success_on_terminal_failure():
+    """A mid-stream failure with no successful fallback raises and is logged as
+    a failure, so the router must never dispatch it as a success. Partial-spend
+    recovery for the failure row happens in the streaming handler, not here, so
+    this guards only against reintroducing a success log for a failed stream.
+    """
+    from litellm.exceptions import MidStreamFallbackError
+    from litellm.types.utils import Delta, StreamingChoices, Usage
+
+    router = litellm.Router(
+        model_list=[
+            {
+                "model_name": "gpt-4",
+                "litellm_params": {"model": "gpt-4", "api_key": "fake-key-1"},
+            },
+        ],
+        set_verbose=True,
+    )
+
+    error = MidStreamFallbackError(
+        message="Connection lost",
+        model="gpt-4",
+        llm_provider="openai",
+        generated_content="The Roman Empire began when",
+    )
+
+    def _make_interrupted_model_response():
+        partial_chunk = litellm.ModelResponseStream(
+            id="chatcmpl-partial-1",
+            created=1742056047,
+            model="gpt-4",
+            object="chat.completion.chunk",
+            choices=[
+                StreamingChoices(
+                    finish_reason=None,
+                    index=0,
+                    delta=Delta(
+                        content="The Roman Empire began when", role="assistant"
+                    ),
+                )
+            ],
+            usage=Usage(prompt_tokens=17, completion_tokens=9, total_tokens=26),
+        )
+
+        class _RaisingStream:
+            def __init__(self):
+                self.index = 0
+                self.chunks = [partial_chunk]
+
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                if self.index == 0:
+                    self.index += 1
+                    return partial_chunk
+                raise error
+
+        stream = _RaisingStream()
+        logging_obj = MagicMock()
+        logging_obj.dispatch_success_handlers = AsyncMock()
+        logging_obj.model_call_details = {}
+        setattr(stream, "model", "gpt-4")
+        setattr(stream, "custom_llm_provider", "openai")
+        setattr(stream, "logging_obj", logging_obj)
+        return stream, logging_obj
+
+    messages = [{"role": "user", "content": "Hello"}]
+    initial_kwargs = {"model": "gpt-4", "stream": True}
+
+    # Terminal path: no successful fallback -> the error propagates and the
+    # router never dispatches a success for the failed stream.
+    model_response, logging_obj = _make_interrupted_model_response()
+    with patch.object(
+        router,
+        "async_function_with_fallbacks_common_utils",
+        new=AsyncMock(side_effect=error),
+    ):
+        result = await router._acompletion_streaming_iterator(
+            model_response=model_response,
+            messages=messages,
+            initial_kwargs=dict(initial_kwargs),
+        )
+        collected = []
+        with pytest.raises(MidStreamFallbackError):
+            async for chunk in result:
+                collected.append(chunk)
+
+    assert len(collected) == 1
+    logging_obj.dispatch_success_handlers.assert_not_called()
+
+    # Fallback success: the fallback stream owns success accounting via
+    # _combine_fallback_usage, so this iterator must not dispatch its own.
+    model_response, logging_obj = _make_interrupted_model_response()
+
+    class _FallbackStream:
+        def __init__(self, items):
+            self.items = items
+            self.index = 0
+
+        def __aiter__(self):
+            return self
+
+        async def __anext__(self):
+            if self.index >= len(self.items):
+                raise StopAsyncIteration
+            item = self.items[self.index]
+            self.index += 1
+            return item
+
+    fallback_stream = _FallbackStream(
+        [
+            litellm.ModelResponseStream(
+                id="chatcmpl-fallback-1",
+                model="gpt-3.5-turbo",
+                object="chat.completion.chunk",
+                choices=[
+                    StreamingChoices(
+                        finish_reason=None,
+                        index=0,
+                        delta=Delta(content=" continued", role="assistant"),
+                    )
+                ],
+            )
+        ]
+    )
+    with patch.object(
+        router,
+        "async_function_with_fallbacks_common_utils",
+        new=AsyncMock(return_value=fallback_stream),
+    ):
+        result = await router._acompletion_streaming_iterator(
+            model_response=model_response,
+            messages=messages,
+            initial_kwargs=dict(initial_kwargs),
+        )
+        collected = []
+        async for chunk in result:
+            collected.append(chunk)
+
+    assert len(collected) == 2
+    logging_obj.dispatch_success_handlers.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_team_scoped_model_fallback():
     """
     Test that fallback works correctly for team-scoped models.
@@ -4466,6 +4645,82 @@ def test_get_fully_blocked_model_names_treats_missing_key_as_unblocked():
         ]
     )
     assert router.get_fully_blocked_model_names() == set()
+
+
+def _seed_unhealthy_states(router, unhealthy_ids, timestamp=None):
+    import time
+
+    ts = timestamp if timestamp is not None else time.time()
+    router.health_state_cache.set_deployment_health_states(
+        {
+            uid: {"is_healthy": False, "timestamp": ts, "reason": "test_unhealthy"}
+            for uid in unhealthy_ids
+        }
+    )
+
+
+@pytest.mark.asyncio
+async def test_async_get_fully_unhealthy_model_names_marks_name_when_all_unhealthy():
+    router = _router_with_two_deployments([False, False])
+    _seed_unhealthy_states(router, {"dep-0", "dep-1"})
+    assert await router.async_get_fully_unhealthy_model_names() == {"gpt-4o"}
+
+
+@pytest.mark.asyncio
+async def test_async_get_fully_unhealthy_model_names_keeps_name_when_partial():
+    router = _router_with_two_deployments([False, False])
+    _seed_unhealthy_states(router, {"dep-0"})
+    assert await router.async_get_fully_unhealthy_model_names() == set()
+
+
+@pytest.mark.asyncio
+async def test_async_get_fully_unhealthy_model_names_empty_without_health_state():
+    router = _router_with_two_deployments([False, False])
+    assert await router.async_get_fully_unhealthy_model_names() == set()
+
+
+@pytest.mark.asyncio
+async def test_async_get_fully_unhealthy_model_names_ignores_stale_state():
+    import time
+
+    router = _router_with_two_deployments([False, False])
+    stale_ts = time.time() - (router.health_state_cache.staleness_threshold + 10)
+    _seed_unhealthy_states(router, {"dep-0", "dep-1"}, timestamp=stale_ts)
+    assert await router.async_get_fully_unhealthy_model_names() == set()
+
+
+@pytest.mark.asyncio
+async def test_async_get_fully_unhealthy_model_names_includes_team_alias():
+    import litellm
+
+    router = litellm.Router(
+        model_list=[
+            {
+                "model_name": "gpt-4o",
+                "litellm_params": {"model": "openai/gpt-4o"},
+                "model_info": {
+                    "id": "dep-0",
+                    "team_id": "team-1",
+                    "team_public_model_name": "team-gpt",
+                },
+            }
+        ]
+    )
+    _seed_unhealthy_states(router, {"dep-0"})
+    assert await router.async_get_fully_unhealthy_model_names() == {
+        "gpt-4o",
+        "team-gpt",
+    }
+
+
+@pytest.mark.asyncio
+async def test_async_get_fully_unhealthy_model_names_noop_with_allowed_fails_policy():
+    from litellm.types.router import AllowedFailsPolicy
+
+    router = _router_with_two_deployments([False, False])
+    router.allowed_fails_policy = AllowedFailsPolicy(BadRequestErrorAllowedFails=1)
+    _seed_unhealthy_states(router, {"dep-0", "dep-1"})
+    assert await router.async_get_fully_unhealthy_model_names() == set()
 
 
 @pytest.mark.asyncio

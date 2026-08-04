@@ -1,21 +1,7 @@
 #!/usr/bin/env bash
-# Concurrent TPM bypass test — mints a virtual key with tpm_limit=100
-# (api_key scope in the v3 rate-limiter), races 10 concurrent calls,
-# prints a verdict, then deletes the key.
-#
-# Note: the `tpm: 100` on a model_list deployment is the *router's*
-# load-balancing TPM, not a v3 rate-limit descriptor. The v3 limiter
-# enforces against limits set on the key/team/user — so we set
-# tpm_limit=100 on the key itself.
-#
-# Pre-PR: ~all 10 return 200 (race lets concurrent requests bypass the limit).
-# Post-PR: only ~1–2 fit under tpm_limit=100, rest return 429.
-#
-# Setup (separate terminal):
-#   kubectl port-forward -n litellm svc/yassin-veks-litellm-helm 4000:4000
-#
-# Run:
-#   bash scripts/tpm_headline_test.sh
+# Concurrent TPM bypass test - races 10 calls against a key with tpm_limit=100 (v3 limiter
+# key scope), prints a verdict, then deletes the key; expect mostly 429s once fixed
+# Run: bash scripts/tpm_headline_test.sh (kubectl port-forward the proxy to :4000 first)
 set -u
 PROXY="${PROXY:-http://localhost:4000}"
 MASTER_KEY="${MASTER_KEY:-sk-perf-test-fixed-do-not-rotate}"

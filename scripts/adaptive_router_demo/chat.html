@@ -465,7 +465,7 @@ const STATE = {
   apiKey: "",
   router: "",
   sessionId: "",
-  messages: [],         // [{role, content}] — sent to the API
+  messages: [],         // [{role, content}] - sent to the API
   scenario: null,
   sending: false,
   msgCount: 0,          // turns in current session
@@ -562,7 +562,7 @@ function appendMessage(role, content, meta) {
 }
 
 function renderBubble(el, text) {
-  // Minimal markdown: fenced code blocks and inline code.
+  // Minimal markdown: fenced code blocks and inline code
   const escaped = text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -644,13 +644,13 @@ async function sendMessage(text) {
       return;
     }
 
-    // Read model from response header (requires proxy to expose via CORS).
+    // Read model from response header (requires proxy to expose via CORS)
     const chosenModel = resp.headers.get("x-litellm-adaptive-router-model");
     const reqType     = resp.headers.get("x-litellm-request-type");
     STATE.lastModel   = chosenModel || "check dashboard";
     STATE.lastReqType = reqType     || "—";
 
-    // Stream the response.
+    // Stream the response
     removeThinking();
     const assistantBubble = appendMessage("assistant", "");
     let fullContent = "";
@@ -664,7 +664,7 @@ async function sendMessage(text) {
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
 
-      // Process complete SSE lines.
+      // Process complete SSE lines
       const lines = buffer.split("\n");
       buffer = lines.pop(); // last fragment may be incomplete
 
